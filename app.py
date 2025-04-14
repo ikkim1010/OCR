@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Tesseract 경로 설정
-pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/opt/homebrew/bin/tesseract')
+pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/local/bin/tesseract')
 
 app = Flask(__name__)
 CORS(app)
@@ -34,12 +34,12 @@ app.static_url_path = '/static'
 # 데이터베이스 설정
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///documents.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'scanned_documents')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 db.init_app(app)
 
 # 저장 디렉토리 설정
-UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'scanned_documents')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # 문서 카테고리 정의
 DOCUMENT_CATEGORIES = [
@@ -54,8 +54,17 @@ with app.app_context():
     db.create_all()
 
 # 서버 설정
-SERVER_HOST = os.getenv('SERVER_HOST', '0.0.0.0')
-SERVER_PORT = int(os.getenv('SERVER_PORT', 8080))
+host = os.getenv('SERVER_HOST', '0.0.0.0')
+port = int(os.getenv('SERVER_PORT', 8080))
+debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+
+# SSL configuration for HTTPS
+ssl_context = None
+if os.getenv('SSL_ENABLED', 'False').lower() == 'true':
+    cert_path = os.getenv('SSL_CERT_PATH')
+    key_path = os.getenv('SSL_KEY_PATH')
+    if cert_path and key_path and os.path.exists(cert_path) and os.path.exists(key_path):
+        ssl_context = (cert_path, key_path)
 
 @app.route('/')
 def index():
@@ -182,7 +191,7 @@ def upload_file():
         filename = f'document_{timestamp}.jpg'
         
         # 처리된 이미지 저장
-        output_path = os.path.join(UPLOAD_FOLDER, filename)
+        output_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         cv2.imwrite(output_path, processed_img)
         
         # 문서 정보를 데이터베이스에 저장
@@ -208,40 +217,30 @@ def upload_file():
 @app.route('/images/<path:filename>')
 def serve_image(filename):
     try:
-        return send_file(os.path.join(UPLOAD_FOLDER, filename))
+        return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     except Exception as e:
         app.logger.error(f'이미지 서빙 중 오류 발생: {str(e)}')
         return jsonify({'error': '이미지를 불러오는 중 오류가 발생했습니다.'}), 500
 
 if __name__ == '__main__':
-    # SSL 인증서 생성 (개발 환경용)
-    if not os.path.exists('cert.pem') or not os.path.exists('key.pem'):
-        os.system('openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"')
+    with app.app_context():
+        db.create_all()
     
     print("서버가 다음 주소에서 실행됩니다:")
-    print(f"https://{SERVER_HOST}:{SERVER_PORT}")
-    print(f"https://localhost:{SERVER_PORT}")
+    print(f"https://{host}:{port}")
+    print(f"https://localhost:{port}")
     
     # 서버 설정 최적화
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
     
     # CORS 설정 추가
     CORS(app, resources={r"/*": {"origins": "*"}})
     
     try:
-        # 멀티프로세싱 모드 비활성화
-        app.run(
-            host=SERVER_HOST,
-            port=SERVER_PORT,
-            ssl_context=('cert.pem', 'key.pem'),
-            debug=(os.getenv('FLASK_DEBUG', '0') == '1'),
-            use_reloader=False,  # 리로더 비활성화
-            threaded=True  # 스레드 모드 사용
-        )
+        app.run(host=host, port=port, debug=debug, ssl_context=ssl_context)
     except OSError as e:
         if "Address already in use" in str(e):
-            print(f"포트 {SERVER_PORT}가 이미 사용 중입니다. 다른 포트를 사용하거나 이전 프로세스를 종료해주세요.")
+            print(f"포트 {port}가 이미 사용 중입니다. 다른 포트를 사용하거나 이전 프로세스를 종료해주세요.")
         else:
             print(f"서버 실행 중 오류 발생: {e}")
     except KeyboardInterrupt:

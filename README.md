@@ -34,21 +34,38 @@ pip install -r requirements.txt
 
 3. 환경 변수 설정:
 `.env` 파일을 생성하고 다음 내용을 추가합니다:
-```
-FLASK_ENV=development
-FLASK_DEBUG=1
-SECRET_KEY=your-secret-key-here
-DATABASE_URL=sqlite:///documents.db
-UPLOAD_FOLDER=scanned_documents
-SERVER_PORT=8080
-SERVER_HOST=0.0.0.0
-TESSERACT_CMD=/opt/homebrew/bin/tesseract
+```bash
+# .env.example 파일을 복사하여 .env 파일 생성
+cp .env.example .env
+# .env 파일을 편집하여 필요한 설정 변경
 ```
 
 4. 서버 실행:
 ```bash
 python app.py
 ```
+
+## 배포 가이드
+
+### 로컬 개발 환경
+1. `.env` 파일에서 `FLASK_ENV=development` 설정
+2. `FLASK_DEBUG=True`로 설정하여 디버그 모드 활성화
+3. `SSL_ENABLED=False`로 설정하여 HTTPS 비활성화
+
+### 프로덕션 환경
+1. `.env` 파일에서 `FLASK_ENV=production` 설정
+2. `FLASK_DEBUG=False`로 설정하여 디버그 모드 비활성화
+3. `SSL_ENABLED=True`로 설정하고 유효한 SSL 인증서 경로 지정
+4. `SECRET_KEY`를 강력한 임의의 문자열로 변경
+5. `SERVER_HOST`를 서버의 실제 IP 또는 도메인으로 설정
+6. `SERVER_PORT`를 사용할 포트 번호로 설정 (기본값: 8080)
+
+### 보안 고려사항
+1. 프로덕션 환경에서는 반드시 HTTPS를 사용
+2. 강력한 `SECRET_KEY` 사용
+3. 적절한 파일 업로드 제한 설정
+4. 데이터베이스 백업 정기적 수행
+5. 서버 방화벽 설정 검토
 
 ## 사용 방법
 
@@ -78,6 +95,7 @@ OCR/
 ├── models.py           # 데이터베이스 모델
 ├── requirements.txt    # Python 패키지 의존성
 ├── .env               # 환경 변수 설정
+├── .env.example       # 환경 변수 예제
 ├── static/            # 정적 파일
 │   ├── manifest.json  # PWA 매니페스트
 │   ├── sw.js         # Service Worker
@@ -90,13 +108,16 @@ OCR/
 ## 환경 변수 설명
 
 - `FLASK_ENV`: Flask 실행 환경 (development/production)
-- `FLASK_DEBUG`: 디버그 모드 활성화 (1/0)
+- `FLASK_DEBUG`: 디버그 모드 활성화 (True/False)
 - `SECRET_KEY`: Flask 세션 암호화 키
 - `DATABASE_URL`: 데이터베이스 연결 URL
 - `UPLOAD_FOLDER`: 스캔된 문서 저장 경로
 - `SERVER_PORT`: 서버 포트 번호 (기본값: 8080)
 - `SERVER_HOST`: 서버 호스트 주소 (기본값: 0.0.0.0)
 - `TESSERACT_CMD`: Tesseract OCR 실행 파일 경로
+- `SSL_ENABLED`: HTTPS 활성화 여부
+- `SSL_CERT_PATH`: SSL 인증서 파일 경로
+- `SSL_KEY_PATH`: SSL 키 파일 경로
 
 ## 라이선스
 
