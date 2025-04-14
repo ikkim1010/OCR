@@ -1,21 +1,31 @@
 {
     "name": "OCR Document Scanner",
     "short_name": "OCR Scanner",
-    "description": "문서 스캔 및 OCR 텍스트 추출 앱",
+    "description": "문서를 스캔하고 OCR로 텍스트를 추출하는 앱",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#4CAF50",
+    "theme_color": "#007AFF",
     "icons": [
         {
             "src": "/static/icons/icon-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         },
         {
             "src": "/static/icons/icon-512x512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "orientation": "portrait",
+    "categories": ["productivity", "utilities"],
+    "shortcuts": [
+        {
+            "name": "새 문서 스캔",
+            "url": "/"
         }
     ]
 } 

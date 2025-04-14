@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Tesseract 경로 설정
-pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/opt/homebrew/bin/tesseract')
+pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
 
 app = Flask(__name__)
 CORS(app)
@@ -214,38 +214,22 @@ def serve_image(filename):
         return jsonify({'error': '이미지를 불러오는 중 오류가 발생했습니다.'}), 500
 
 if __name__ == '__main__':
-    # SSL 인증서 생성 (개발 환경용)
-    if not os.path.exists('cert.pem') or not os.path.exists('key.pem'):
-        os.system('openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"')
+    with app.app_context():
+        db.create_all()
     
     print("서버가 다음 주소에서 실행됩니다:")
-    print(f"https://{SERVER_HOST}:{SERVER_PORT}")
-    print(f"https://localhost:{SERVER_PORT}")
-    
-    # 서버 설정 최적화
-    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
-    
-    # CORS 설정 추가
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    print(f"http://localhost:9000")
     
     try:
-        # 멀티프로세싱 모드 비활성화
         app.run(
-            host=SERVER_HOST,
-            port=SERVER_PORT,
-            ssl_context=('cert.pem', 'key.pem'),
-            debug=(os.getenv('FLASK_DEBUG', '0') == '1'),
-            use_reloader=False,  # 리로더 비활성화
-            threaded=True  # 스레드 모드 사용
+            host='0.0.0.0',
+            port=9000,
+            debug=True
         )
     except OSError as e:
         if "Address already in use" in str(e):
-            print(f"포트 {SERVER_PORT}가 이미 사용 중입니다. 다른 포트를 사용하거나 이전 프로세스를 종료해주세요.")
+            print(f"포트 9000이 이미 사용 중입니다. 다른 포트를 사용하거나 이전 프로세스를 종료해주세요.")
         else:
             print(f"서버 실행 중 오류 발생: {e}")
-    except KeyboardInterrupt:
-        print("\n서버가 종료되었습니다.")
     finally:
-        # 리소스 정리
         print("리소스를 정리합니다...") 
